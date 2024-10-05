@@ -2,7 +2,10 @@ import "./App.css";
 import { Canvas } from "@react-three/fiber";
 import RotatingCube from "./Components/RotatingCube";
 import { Backdrop, OrbitControls, SoftShadows } from "@react-three/drei";
-import { Vector3 } from "three";
+import { Mesh, Vector3 } from "three";
+import GravitySphere from "./Components/GravitySphere";
+import { Physics } from "@react-three/cannon";
+import { useRef } from "react";
 // import AreaLight from "./Components/AreaLight";
 
 function App() {
@@ -10,6 +13,21 @@ function App() {
     size: 30,
     focus: 1.5,
     samples: 30,
+  };
+
+
+  const sphereRefs = useRef<React.MutableRefObject<Mesh>[]>([]);
+
+  const handlePointerDown = (event: React.PointerEvent) => {
+    const explosionForce = 100;
+    const { x, y } = event;
+    const explosionPosition = new Vector3((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1, 0);
+
+    sphereRefs.current.forEach((ref) => {
+      if (ref.current) {
+        ref.current.api.applyImpulse([explosionForce, explosionForce, explosionForce], [explosionPosition.x, explosionPosition.y, explosionPosition.z]);
+      }
+    });
   };
 
   return (
@@ -27,7 +45,12 @@ function App() {
       {/* <AreaLight intensity={1} position={[-5, 7, 0]} lookAtVector={new Vector3(0, 0, 0)} color="#ffeeee"/>
       <AreaLight intensity={1} position={[5, 5, 0]} lookAtVector={new Vector3(0, 0, 0)} /> */}
 
-      <directionalLight position={[5, 5, 3]} color={"white"} intensity={1} castShadow />
+      <directionalLight
+        position={[5, 5, 3]}
+        color={"white"}
+        intensity={1}
+        castShadow
+      />
 
       {/* Soft ambient light */}
       <ambientLight intensity={0.5} />
@@ -45,6 +68,15 @@ function App() {
       >
         <meshStandardMaterial color={"white"} />
       </Backdrop>
+
+      <Physics gravity={[0, 0, 0]}>
+        {/* <GravitySphere position={[0, 0, 0]} /> */}
+        <GravitySphere ref={(ref) => ref && sphereRefs.current.push(ref)} position={[3, 3, 0]} />
+        <GravitySphere position={[2, 2, 2]} />
+        <GravitySphere position={[-2, -2, 0]} />
+
+
+      </Physics>
 
       {/* <Environment preset="city" environmentIntensity={0.3}  /> */}
 
