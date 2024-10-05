@@ -1,23 +1,47 @@
 import { useFrame, useThree } from "@react-three/fiber";
-import { useRef, useEffect } from "react";
-import { CubeCamera, WebGLCubeRenderTarget, Mesh, RGBFormat, LinearMipmapLinearFilter } from "three";
+import { useEffect, useRef } from "react";
+import {
+  CubeCamera,
+  WebGLCubeRenderTarget,
+  Mesh,
+  RGBFormat,
+  LinearMipmapLinearFilter,
+  Vector3,
+} from "three";
 
-const RotatingCube: React.FC = function () {
+interface RotatingCubeProps {
+  position?: Vector3 | undefined;
+}
+
+const RotatingCube: React.FC<RotatingCubeProps> = function ({ position = new Vector3(0,0,0) }) {
   const meshRef = useRef<Mesh>(null);
   const cubeCamRef = useRef<CubeCamera>(null);
   const { gl, scene } = useThree(); // Get the scene and WebGL renderer
+
+  // random number offset to be used for the rotations 
+  const offset = Math.random() * 30;
 
   // Create WebGLCubeRenderTarget once and assign it to the CubeCamera
   const cubeRenderTarget = new WebGLCubeRenderTarget(256, {
     format: RGBFormat,
     generateMipmaps: true,
-    minFilter: LinearMipmapLinearFilter
+    minFilter: LinearMipmapLinearFilter,
   });
 
-  useFrame(() => {
+  useEffect(() => {
+    if (meshRef.current) {
+      meshRef.current.rotation.set(offset, offset, 0);
+    }
+  });
+
+  useFrame((state) => {
+    const elapsedTime = state.clock.getElapsedTime();
     if (meshRef.current) {
       meshRef.current.rotation.x += 0.01;
       meshRef.current.rotation.y += 0.01;
+
+      // Add cosine wave hover motion on the Y axis (up and down)
+      meshRef.current.position.y = Math.cos(elapsedTime * 2) * 0.5; // amplitude of 0.5 units
     }
 
     // Update the CubeCamera to reflect the scene
@@ -38,10 +62,10 @@ const RotatingCube: React.FC = function () {
       />
 
       {/* Cube mesh */}
-      <mesh ref={meshRef} position={[0, 0, 0]} receiveShadow castShadow>
+      <mesh ref={meshRef} position={position} receiveShadow castShadow>
         <boxGeometry args={[1, 1, 1]} />
         <meshStandardMaterial
-          metalness={1}
+          metalness={0.1}
           roughness={0}
           color="orange"
           envMap={cubeRenderTarget.texture} // Use the cube render target texture as the envMap
