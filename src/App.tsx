@@ -1,12 +1,12 @@
-import "./App.css";
-import { Canvas } from "@react-three/fiber";
-import RotatingCube from "./Components/RotatingCube";
-import { Backdrop, OrbitControls, SoftShadows } from "@react-three/drei";
-import { Mesh, Vector3 } from "three";
-import GravitySphere from "./Components/GravitySphere";
-import { Physics } from "@react-three/cannon";
-import { useRef } from "react";
-// import AreaLight from "./Components/AreaLight";
+import React, { useRef } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import RotatingCube from './Components/RotatingCube';
+import { Backdrop, OrbitControls, SoftShadows } from '@react-three/drei';
+import { Vector3 } from 'three';
+import GravitySphere from './Components/GravitySphere';
+import { Physics, PublicApi } from '@react-three/cannon';
+import GlobalClickListener from './Components/GlobalClickListener';
+// import AreaLight from './Components/AreaLight';
 
 function App() {
   const config = {
@@ -15,23 +15,41 @@ function App() {
     samples: 30,
   };
 
-
-  const sphereRefs = useRef<React.MutableRefObject<Mesh>[]>([]);
+  const sphereRefs = useRef<{ api: PublicApi }[]>([]);
 
   const handlePointerDown = (event: React.PointerEvent) => {
-    const explosionForce = 100;
-    const { x, y } = event;
-    const explosionPosition = new Vector3((x / window.innerWidth) * 2 - 1, -(y / window.innerHeight) * 2 + 1, 0);
+    const explosionForce = 3;
+    // const { clientX, clientY } = event;
+    // const explosionPosition = new Vector3((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1, 0);
+    const explosionPosition = vec;
+    console.log('explosionPosition', explosionPosition);
 
     sphereRefs.current.forEach((ref) => {
-      if (ref.current) {
-        ref.current.api.applyImpulse([explosionForce, explosionForce, explosionForce], [explosionPosition.x, explosionPosition.y, explosionPosition.z]);
-      }
+      ref.api.applyImpulse([explosionForce, explosionForce, explosionForce], [explosionPosition.x, explosionPosition.y, explosionPosition.z]);
     });
   };
+  
+  const vec = new Vector3();
+  function MouseToWorld() {
+    const { camera, pointer, viewport } = useThree();
+  
+    useFrame(() => {
+      // Convert mouse position to normalized device coordinates (-1 to +1)
+      const x = (pointer.x * viewport.width) / 2;
+      const y = (pointer.y * viewport.height) / 2;
+  
+      // Convert normalized device coordinates to world coordinates
+      vec.set(x, y, 0).unproject(camera);
+      // console.log('World Position:', vec);
+    });
+  
+    return null;
+  }
 
   return (
-    <Canvas shadows camera={{ position: [0, 0, 6], fov: 50 }}>
+    <Canvas shadows camera={{ position: [0, 0, 6], fov: 50 }} onPointerDown={handlePointerDown}>
+      <MouseToWorld />
+      <GlobalClickListener />
       {/* Enable soft shadows with drei */}
       <SoftShadows
         size={config.size}
@@ -39,15 +57,9 @@ function App() {
         focus={config.focus}
       />
 
-      {/* <fog attach="fog" args={["white", 0, 50]} /> */}
-      {/* <orthographicCamera attach="shadow-camera" args={[-10, 10, -10, 10, 0.1, 50]} /> */}
-
-      {/* <AreaLight intensity={1} position={[-5, 7, 0]} lookAtVector={new Vector3(0, 0, 0)} color="#ffeeee"/>
-      <AreaLight intensity={1} position={[5, 5, 0]} lookAtVector={new Vector3(0, 0, 0)} /> */}
-
       <directionalLight
         position={[5, 5, 3]}
-        color={"white"}
+        color={'white'}
         intensity={1}
         castShadow
       />
@@ -66,19 +78,14 @@ function App() {
         scale={[30, 10, 10]} // Scale backdrop to cover the whole scene
         receiveShadow // Ensure the backdrop can receive shadows
       >
-        <meshStandardMaterial color={"white"} />
+        <meshStandardMaterial color={'white'} />
       </Backdrop>
 
       <Physics gravity={[0, 0, 0]}>
-        {/* <GravitySphere position={[0, 0, 0]} /> */}
         <GravitySphere ref={(ref) => ref && sphereRefs.current.push(ref)} position={[3, 3, 0]} />
-        <GravitySphere position={[2, 2, 2]} />
-        <GravitySphere position={[-2, -2, 0]} />
-
-
+        <GravitySphere ref={(ref) => ref && sphereRefs.current.push(ref)} position={[2, 2, 2]} />
+        <GravitySphere ref={(ref) => ref && sphereRefs.current.push(ref)} position={[-2, -2, 0]} />
       </Physics>
-
-      {/* <Environment preset="city" environmentIntensity={0.3}  /> */}
 
       {/* Add OrbitControls for easier interaction */}
       <OrbitControls />
